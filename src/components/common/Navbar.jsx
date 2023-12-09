@@ -13,13 +13,15 @@ import {
   Collapse,
   ListItemText,
 } from "@mui/material";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Menu from "@mui/material/Menu";
 import { Close, ExpandMore, Help, HelpOutline } from "@mui/icons-material";
 import MenuIcon from "@mui/icons-material/Menu";
 import Logo from "../../assets/images/logo.png";
 import LogoTwo from "../../assets/images/logo_02.png";
 import { Link } from "react-router-dom";
+
+import { Topbar } from "./Topbar";
 
 const useStyles = {
   menuIcon: {
@@ -96,6 +98,7 @@ const Navbar = () => {
   const [blogAnchorEl, setBlogAnchorEl] = useState(null);
   const [pageCollapse, setPageCollapse] = useState(false);
   const [blogCollapse, setBlogCollapse] = useState(false);
+  const [showBackToTop, setShowBackToTop] = useState(false);
   const [helpicon, setHelpIcon] = useState(true);
   const pagesMenuOpen = Boolean(pagesAnchorEl);
   const blogMenuOpen = Boolean(blogAnchorEl);
@@ -119,21 +122,50 @@ const Navbar = () => {
     setBlogCollapse(false);
   };
 
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollHeight = window.scrollY;
+      setShowBackToTop(scrollHeight > 200);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, []);
+
   return (
-    <Box>
+    <Box
+      sx={{
+        position: showBackToTop ? "fixed" : "static",
+        width: "100%",
+        top: "0",
+        zIndex: "1",
+        // transition: "position 0.5s ease-in 0.5s",
+      }}
+    >
+      <Topbar bottombar={showBackToTop} />
       <AppBar
         position="static"
         color="transparent"
-        sx={{ boxShadow: "none", padding: { xs: "1em 0.5em", sm: "1em 2em" } }}
+        sx={{
+          boxShadow: "none",
+          background: showBackToTop && "#232b38",
+          transition: "background 0.2s ease-in 0.2s",
+        }}
       >
         <Toolbar
           sx={{
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
+            padding: { xs: "0.5em 1em", sm: "1em 1em" },
           }}
         >
-          <img src={Logo} alt="geair-logo" />
+          <Link to={"/"}>
+            <img src={Logo} alt="geair-logo" />
+          </Link>
           <Box sx={{ display: "flex", alignItems: "center" }}>
             <Box sx={{ display: { xs: "none", md: "block" } }}>
               <List
@@ -244,7 +276,7 @@ const Navbar = () => {
                 </ListItem>
               </List>
             </Box>
-            <Box ml={1}>
+            <Box ml={1} sx={{ display: { xs: "none", sm: "block" } }}>
               <Typography variant="button" color="#fff" fontWeight={600}>
                 USD
               </Typography>
@@ -254,18 +286,18 @@ const Navbar = () => {
                   sx={{ height: "25px", width: "25px" }}
                 />
               </IconButton>
+              <IconButton
+                sx={{ m: "0 0.5em" }}
+                onMouseEnter={() => setHelpIcon(false)}
+                onMouseLeave={() => setHelpIcon(true)}
+              >
+                {helpicon ? (
+                  <HelpOutline sx={useStyles.menuIcon} />
+                ) : (
+                  <Help sx={useStyles.menuIcon} />
+                )}
+              </IconButton>
             </Box>
-            <IconButton
-              sx={{ m: "0 0.5em" }}
-              onMouseEnter={() => setHelpIcon(false)}
-              onMouseLeave={() => setHelpIcon(true)}
-            >
-              {helpicon ? (
-                <HelpOutline sx={useStyles.menuIcon} />
-              ) : (
-                <Help sx={useStyles.menuIcon} />
-              )}
-            </IconButton>
             <IconButton
               edge="start"
               color="inherit"

@@ -62,9 +62,19 @@ const StyledButton = styled(Button)({
   "&:hover": { backgroundColor: "#6f9a36", transition: "0.5s" },
 });
 
-export const Topbar = () => {
+export const Topbar = (props) => {
+  const showBottomBar = props.bottombar;
+
   return (
-    <Box sx={{ position: "sticky", top: 0, left: 0, zIndex: 1 }}>
+    <Box
+      sx={{
+        position: "sticky",
+        width: "100%",
+        top: 0,
+        left: 0,
+        zIndex: 1,
+      }}
+    >
       <ThemeProvider theme={theme}>
         <CssBaseline />
         <Grid
@@ -80,6 +90,7 @@ export const Topbar = () => {
           <Grid item xs={6}>
             <Link>
               <img
+                id="top"
                 src={TopLogo}
                 alt="evanto-logo"
                 style={{
@@ -100,7 +111,9 @@ export const Topbar = () => {
         <Grid
           container
           sx={{
-            display: { xs: "none", sm: "flex" },
+            display: showBottomBar
+              ? "none"
+              : "flex" || { xs: "none", sm: "flex" },
             alignItems: "center",
             p: "2px 15px",
             backgroundColor: "#232b38",
@@ -133,9 +146,9 @@ export const Topbar = () => {
           <Grid item xs={12} md={5}>
             <List
               sx={{
-                display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
+                display: { xs: "none", sm: "flex" },
               }}
             >
               <ListItem sx={useStyles.listItem}>

@@ -44,6 +44,7 @@ import { motion } from "framer-motion";
 import { airportsJson, airportNames } from "./airports";
 import "../../../App.css";
 import theme from "../../../assets/styles/theme";
+import Image from "../../../assets/images/Decrease_4.jpg";
 
 const bookingTabStyles = {
   grid: {
@@ -164,6 +165,7 @@ const BookingForm = ({
             onChange={(event, newValue) => {
               formik.setFieldValue("tripType", newValue);
             }}
+            sx={{ margin: "0 1em" }}
           >
             <FormControlLabel
               value="Roundtrip"
@@ -398,7 +400,7 @@ export const BookingTab = () => {
   const [flightsWithinPriceRange, setFlightsWithinPriceRange] = useState([]);
   const [filteredAirports, setFilteredAirports] = useState([]);
   const [sliderChanged, setSliderChanged] = useState(false);
-  const sliderBtnRef = useRef(null);
+  // const sliderBtnRef = useRef(null);
 
   const handleFilterBtn = () => {
     const airports = filteredAirports.filter((flight) => {
@@ -911,13 +913,13 @@ export const BookingTab = () => {
               </Grid>
             </Grid>
           </CardContent>
-          <Divider sx={{ borderStyle: "dashed" }} />
           {displayFlightDetails && (
             <motion.div
               initial={{ height: "0" }}
               animate={{ height: "auto" }}
               transition={{ type: "spring", duration: 0.5 }}
             >
+              <Divider sx={{ borderStyle: "dashed" }} />
               <CardContent sx={{ padding: "1em 3em 2em!important" }}>
                 <Grid
                   container
@@ -1098,13 +1100,15 @@ export const BookingTab = () => {
         sx={{
           position: "absolute",
           marginTop: changeHeight ? 53 : 30.5,
-          minHeight: "100vh",
+          minHeight: "50vh",
           width: "100%",
           left: 0,
           right: 0,
           background: "#FBF9F2",
           // padding: "0 6em",
           paddingTop: "4em",
+          display: formData.fromValue === "" ? "none" : "block",
+          transition: "display ease-out 0.2s",
         }}
       >
         <Container maxWidth="xl">
@@ -1112,37 +1116,62 @@ export const BookingTab = () => {
             <Grid item md={3} sx={{ display: { sm: "none", md: "block" } }}>
               <FilterTab />
             </Grid>
-            <Grid item xs={12} md={9}>
-              {flightsWithinPriceRange.map((flight, index) => (
-                <DisplayFlightData
-                  key={index} // Make sure to provide a unique key for each element in the array
-                  flightLogo={flight.flightDetails[0].flightLogo}
-                  flightName={flight.flightDetails[0].flightName}
-                  operatorName={flight.flightDetails[0].operatorName}
-                  // flightDay={flight}
-                  // flightDate={"Jun 16"}
-                  journeyTime={flight.flightDetails[0].journeyTime}
-                  flightTime={flight.flightDetails[0].flightTime}
-                  numberOfStops={flight.flightDetails[0].numberOfStops}
-                  flightCost={flight.flightDetails[0].flightCost}
-                  fromLocation={flight.airportCode + " - " + flight.airportName}
-                  toLocation={
-                    airportsJson.find(
-                      (airport) => airport.stateAirportName === formData.toValue
-                    )
-                      ? airportsJson.find(
-                          (airport) =>
-                            airport.stateAirportName === formData.toValue
-                        ).airportCode +
-                        " - " +
-                        airportsJson.find(
-                          (airport) =>
-                            airport.stateAirportName === formData.toValue
-                        ).stateAirportName
-                      : ""
-                  }
-                />
-              ))}
+            <Grid item xs={12} md={9} pb={10}>
+              {flightsWithinPriceRange.length > 0 ? (
+                flightsWithinPriceRange.map((flight, index) => (
+                  <DisplayFlightData
+                    key={index} // Make sure to provide a unique key for each element in the array
+                    flightLogo={flight.flightDetails[0].flightLogo}
+                    flightName={flight.flightDetails[0].flightName}
+                    operatorName={flight.flightDetails[0].operatorName}
+                    // flightDay={flight}
+                    // flightDate={"Jun 16"}
+                    journeyTime={flight.flightDetails[0].journeyTime}
+                    flightTime={flight.flightDetails[0].flightTime}
+                    numberOfStops={flight.flightDetails[0].numberOfStops}
+                    flightCost={flight.flightDetails[0].flightCost}
+                    fromLocation={
+                      flight.airportCode + " - " + flight.airportName
+                    }
+                    toLocation={
+                      airportsJson.find(
+                        (airport) =>
+                          airport.stateAirportName === formData.toValue
+                      )
+                        ? airportsJson.find(
+                            (airport) =>
+                              airport.stateAirportName === formData.toValue
+                          ).airportCode +
+                          " - " +
+                          airportsJson.find(
+                            (airport) =>
+                              airport.stateAirportName === formData.toValue
+                          ).stateAirportName
+                        : ""
+                    }
+                  />
+                ))
+              ) : (
+                <Box
+                  display={"flex"}
+                  justifyContent={"center"}
+                  alignItems={"center"}
+                  flexDirection={"column"}
+                >
+                  <img
+                    src={Image}
+                    alt="No Data"
+                    style={{
+                      width: "300px",
+                      height: "200px",
+                      objectFit: "cover",
+                      objectPosition: "center",
+                      borderRadius: "45%",
+                    }}
+                  />
+                  <Typography variant="h6">No Flights Available</Typography>
+                </Box>
+              )}
             </Grid>
           </Grid>
         </Container>
@@ -1164,6 +1193,7 @@ export const BookingTab = () => {
           width: "100%",
           position: "absolute",
           zIndex: "0",
+          minHeight: "100vh",
           marginTop: changeHeight ? "182px" : "0px",
         }}
       >

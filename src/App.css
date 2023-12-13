@@ -4,3 +4,26 @@
   box-sizing: border-box;
   /* background: #f3a200; */
 }
+
+.sliderBtn {
+  transition: all 0.5s;
+}
+
+.ripple {
+  animation: ripple-animation 0.6s ease-in-out;
+}
+
+@keyframes ripple-animation {
+  50% {
+    background-color: #57112f;
+    color: #fff;
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  100% {
+    background-color: #fbf9f2;
+    color: #fff;
+    transform: scale(1);
+    opacity: 1;
+  }
+}

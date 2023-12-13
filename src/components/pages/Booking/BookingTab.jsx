@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Card,
   Container,
@@ -42,6 +42,8 @@ import { useFormik } from "formik";
 import * as Yup from "yup";
 import { motion } from "framer-motion";
 import { airportsJson, airportNames } from "./airports";
+import "../../../App.css";
+import theme from "../../../assets/styles/theme";
 
 const bookingTabStyles = {
   grid: {
@@ -392,9 +394,11 @@ const BookingForm = ({
 
 export const BookingTab = () => {
   const [changeHeight, setChangeHeight] = useState(false);
-  const [sliderValue, setSliderValue] = React.useState([600, 3000]);
+  const [sliderValue, setSliderValue] = React.useState([900, 1100]);
   const [flightsWithinPriceRange, setFlightsWithinPriceRange] = useState([]);
   const [filteredAirports, setFilteredAirports] = useState([]);
+  const [sliderChanged, setSliderChanged] = useState(false);
+  const sliderBtnRef = useRef(null);
 
   const handleFilterBtn = () => {
     const airports = filteredAirports.filter((flight) => {
@@ -406,6 +410,7 @@ export const BookingTab = () => {
     setFlightsWithinPriceRange(airports);
     // console.log("filteredAirports", filteredAirports);
     // console.log("final", flightsWithinPriceRange);
+    setSliderChanged(false);
   };
 
   const [formData, setFormData] = useState({
@@ -445,13 +450,10 @@ export const BookingTab = () => {
 
     const handleSliderChange = (event, newValue) => {
       setSliderValue(newValue);
-      // const sliderAirports = filteredAirports.filter(
-      //   (airport) =>
-      //     airport.flightDetails[0].flightCost >= sliderValue[0] &&
-      //     airport.flightDetails[0].flightCost <= sliderValue[1]
-      // );
-      // setFilteredAirports(sliderAirports);
-      // console.log(sliderAirports);
+      setSliderChanged(true);
+      // setTimeout(() => {
+      //   setSliderChanged(false);
+      // }, 500);
     };
 
     useEffect(() => {
@@ -501,8 +503,8 @@ export const BookingTab = () => {
               onChange={handleSliderChange}
               aria-labelledby=""
               valueLabelDisplay="off"
-              min={300}
-              max={2500}
+              min={800}
+              max={1500}
               step={1}
               sx={{ color: "#57112f", mb: "30px" }}
             />
@@ -526,17 +528,25 @@ export const BookingTab = () => {
                 </span>
               </Typography>
               <Button
+                className={`sliderBtn ${sliderChanged && "ripple"}`}
                 onClick={handleFilterBtn}
                 sx={{
                   transition: "all .3s ease-out 0s",
+                  textTransform: "capitalize",
                   cursor: "pointer",
                   minWidth: "68px",
                   padding: "9px 12px",
-                  color: "#571336",
+                  color: sliderChanged ? "#fff" : "#571336",
                   fontSize: "13px",
-                  background: "#fbf9f2",
+                  background: sliderChanged ? "#57112f" : "#fbf9f2",
                   fontWeight: "600",
                   border: "1px solid #ebebeb",
+                  "&:hover": {
+                    color: sliderChanged && "#57112f",
+                  },
+                  "&:active": {
+                    background: sliderChanged && theme.palette.success.light,
+                  },
                 }}
               >
                 Filter

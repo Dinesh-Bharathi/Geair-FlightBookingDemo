@@ -18,23 +18,30 @@ import {
   Button,
   Slider,
   Divider,
+  CardContent,
 } from "@mui/material";
 import {
   AirplaneTicket,
   ArticleOutlined,
   Brightness4Outlined,
   ConnectingAirports,
+  ExpandMore,
+  Flight,
   FlightTakeoff,
   ImportExport,
   NightsStayOutlined,
   PendingActions,
+  RadioButtonUnchecked,
   TaskAlt,
   WbSunnyOutlined,
   WbTwilight,
 } from "@mui/icons-material";
-import axios from "axios";
 import { DatePicker, LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
+import { useFormik } from "formik";
+import * as Yup from "yup";
+import { motion } from "framer-motion";
+import { airportsJson, airportNames } from "./airports";
 
 const bookingTabStyles = {
   grid: {
@@ -72,71 +79,163 @@ const bookingTabStyles = {
   },
 };
 
-const BookingForm = () => {
-  const [departureOptions, setDepartureOptions] = useState([]);
-  const [destinationOptions, setDestinationOptions] = useState([]);
-  const [fromValue, setFromValue] = useState(null);
-  const [toValue, setToValue] = useState(null);
-  const [departDate, setDepartDate] = useState(null);
-  const [returnDate, setReturnDate] = useState(null);
+const BookingForm = ({
+  setFormData,
+  setFilteredAirports,
+  setFlightsWithinPriceRange,
+}) => {
+  const today = new Date();
+  const month = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
 
-  useEffect(() => {
-    const fetchAirportData = async () => {
-      try {
-        const response = await axios.get(
-          "https://6530cc406c756603295f0e02.mockapi.io/Geair"
-        );
-        setDepartureOptions(response.data);
-        setDestinationOptions(response.data);
-      } catch (error) {
-        console.error("Error fetching airport data:", error);
-      }
-    };
+  const validationSchema = Yup.object({
+    tripType: Yup.string().required("Trip type is required"),
+    fromValue: Yup.string().required("From location is required"),
+    toValue: Yup.string()
+      .required("To location is required")
+      .notOneOf(
+        [Yup.ref("fromValue")],
+        "From and To locations cannot be the same"
+      ),
+  });
 
-    fetchAirportData();
-  }, []);
+  const formik = useFormik({
+    initialValues: {
+      tripType: "One-way",
+      fromValue: "",
+      toValue: "",
+      tourType: "",
+      departDate: {
+        fullDate: today,
+        date: today.getDate(),
+        day: today.toLocaleDateString("en-US", { weekday: "long" }),
+        month: month[today.getMonth()],
+      },
+      returnDate: {
+        fullDate: today,
+        date: today.getDate(),
+        day: today.toLocaleDateString("en-US", { weekday: "long" }),
+        month: month[today.getMonth()],
+      },
+    },
+    validationSchema: validationSchema,
+    onSubmit: (values) => {
+      // console.log("Form values", formik.values);
+      // console.log("Error", formik.errors);
+      setFormData(values);
+      const filteredAirports = airportsJson.filter(
+        (airport) => airport.stateAirportName === values.fromValue
+      );
+      setFilteredAirports(filteredAirports);
+      setFlightsWithinPriceRange(filteredAirports);
+      // console.log(filteredAirports);
+      // console.log(formik.values.returnDate);
+    },
+  });
 
   const handleIconClick = () => {
-    // Swap the "From" and "To" values
-    setFromValue(toValue);
-    setToValue(fromValue);
+    formik.setFieldValue("fromValue", formik.values.toValue);
+    formik.setFieldValue("toValue", formik.values.fromValue);
   };
 
   return (
-    <Box>
+    <Box component={"form"} onSubmit={formik.handleSubmit}>
+      <Grid container>
+        <FormControl>
+          <RadioGroup
+            row
+            aria-labelledby="demo-controlled-radio-buttons-group"
+            name="controlled-radio-buttons-group"
+            value={formik.values.tripType}
+            onChange={(event, newValue) => {
+              formik.setFieldValue("tripType", newValue);
+            }}
+          >
+            <FormControlLabel
+              value="Roundtrip"
+              control={<Radio sx={bookingTabStyles.radio} />}
+              label={<span style={bookingTabStyles.radioLable}>Roundtrip</span>}
+            />
+            <FormControlLabel
+              value="One-way"
+              control={<Radio sx={bookingTabStyles.radio} />}
+              label={<span style={bookingTabStyles.radioLable}>One-way</span>}
+            />
+            <FormControlLabel
+              value="Multi-city"
+              control={<Radio sx={bookingTabStyles.radio} />}
+              label={
+                <span style={bookingTabStyles.radioLable}>Multi-city</span>
+              }
+            />
+          </RadioGroup>
+        </FormControl>
+      </Grid>
       <Grid
         container
-        sx={{ background: "#F8F3E7", borderRadius: "4px", padding: "0.5em 0" }}
+        sx={{
+          background: "#F8F3E7",
+          borderRadius: "4px",
+          padding: "0.5em 0",
+        }}
       >
-        <Grid item md={4} display={"flex"} position={"relative"}>
+        <Grid item xs={12} md={4} display={"flex"} position={"relative"}>
           <Autocomplete
-            key="from-autocomplete"
-            options={departureOptions}
+            id="fromAutoComplete"
+            options={airportNames.map((airport) => airport.stateAirportName)}
             disableClearable
-            value={fromValue}
-            onChange={(event, newValue) => setFromValue(newValue)}
-            getOptionLabel={(option) => option.name || ""}
+            value={formik.values.fromValue}
+            onChange={(event, newValue) =>
+              formik.setFieldValue("fromValue", newValue)
+            }
+            getOptionLabel={(option) => option || ""}
             style={{ width: "100%" }}
             renderInput={(params) => (
               <TextField
                 {...params}
                 label="From"
-                sx={{ pr: 2, background: "none" }}
+                fullWidth
+                sx={{ width: "90%" }}
+                error={
+                  formik.touched.fromValue && Boolean(formik.errors.fromValue)
+                }
+                helperText={formik.touched.fromValue && formik.errors.fromValue}
               />
             )}
           />
           <Autocomplete
-            key="to-autocomplete"
-            options={destinationOptions}
+            id="toAutoComplete"
+            options={airportNames.map((airport) => airport.stateAirportName)}
             disableClearable
-            value={toValue}
-            onChange={(event, newValue) => setToValue(newValue)}
-            getOptionLabel={(option) => option.name || ""}
+            value={formik.values.toValue}
+            onChange={(event, newValue) =>
+              formik.setFieldValue("toValue", newValue)
+            }
+            getOptionLabel={(option) => option || ""}
             style={{ width: "100%" }}
             renderInput={(params) => (
-              <TextField {...params} label="To" sx={{ background: "none" }} />
+              <TextField
+                {...params}
+                label="To"
+                fullWidth
+                error={formik.touched.toValue && Boolean(formik.errors.toValue)}
+                helperText={formik.touched.toValue && formik.errors.toValue}
+              />
             )}
           />
+
           <IconButton
             onClick={handleIconClick}
             sx={{
@@ -158,12 +257,16 @@ const BookingForm = () => {
         </Grid>
         <Grid item md={2}>
           <FormControl fullWidth>
-            <InputLabel id="demo-simple-select-label">Trip</InputLabel>
+            <InputLabel id="demo-simple-select-label">Tour type</InputLabel>
             <Select
               labelId="demo-simple-select-label"
               id="demo-simple-select"
-              label="Trip"
+              label="Tour type"
               fullWidth
+              value={formik.values.tourType}
+              onChange={(event) =>
+                formik.setFieldValue("tourType", event.target.value)
+              }
             >
               <MenuItem value="">Tour type</MenuItem>
               <MenuItem value={"Adventure Travel"}>Adventure Travel</MenuItem>
@@ -177,23 +280,63 @@ const BookingForm = () => {
           <LocalizationProvider dateAdapter={AdapterDateFns}>
             <DatePicker
               label="Depart Date"
-              value={departDate}
-              onChange={(newValue) => setDepartDate(newValue)}
-              renderInput={(params) => (
-                <TextField {...params} helperText="" format="dd/MM/yyyy" />
-              )}
-            />
-          </LocalizationProvider>
-          <LocalizationProvider dateAdapter={AdapterDateFns}>
-            <DatePicker
-              label="Return Date"
-              value={returnDate}
-              onChange={(newValue) => setReturnDate(newValue)}
+              value={formik.values.departDate.fullDate}
+              minDate={today}
+              onChange={(newValue) => {
+                const monthString = month[newValue.getMonth() + 1];
+                formik.setFieldValue("departDate", {
+                  fullDate: newValue,
+                  date: newValue.getDate(),
+                  month: monthString,
+                  day: newValue.toLocaleDateString("en-US", {
+                    weekday: "long",
+                  }),
+                });
+                // Update returnDate to the same as departDate when departDate changes
+                formik.setFieldValue("returnDate", {
+                  fullDate: newValue,
+                  date: newValue.getDate(),
+                  month: monthString,
+                  day: newValue.toLocaleDateString("en-US", {
+                    weekday: "long",
+                  }),
+                });
+              }}
               renderInput={(params) => (
                 <TextField
                   {...params}
-                  variant="filled"
-                  helperText=""
+                  helperText={
+                    formik.touched.departDate && formik.errors.departDate
+                  }
+                  format="dd/MM/yyyy"
+                />
+              )}
+            />
+          </LocalizationProvider>
+
+          <LocalizationProvider dateAdapter={AdapterDateFns}>
+            <DatePicker
+              label="Return Date"
+              value={formik.values.returnDate.fullDate}
+              minDate={formik.values.departDate.fullDate || today}
+              onChange={(newValue) => {
+                const selectedMonthString = month[newValue.getMonth()];
+                formik.setFieldValue("returnDate", {
+                  fullDate: newValue,
+                  date: newValue.getDate(),
+                  month: selectedMonthString,
+                  day: newValue.toLocaleDateString("en-US", {
+                    weekday: "long",
+                  }),
+                });
+              }}
+              disabled={formik.values.tripType === "One-way"}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  helperText={
+                    formik.touched.returnDate && formik.errors.returnDate
+                  }
                   format="dd/MM/yyyy"
                 />
               )}
@@ -228,6 +371,8 @@ const BookingForm = () => {
           <Button
             type="submit"
             variant="contained"
+            // disabled={!formik.isValid}
+            // onSubmit={formik.handleSubmit}
             sx={{
               background: "#ffa903",
               padding: "12px 20px",
@@ -245,13 +390,42 @@ const BookingForm = () => {
   );
 };
 
-const DisplayFlights = () => {
+export const BookingTab = () => {
   const [changeHeight, setChangeHeight] = useState(false);
-  const [sliderValue, setSliderValue] = React.useState([1000, 4500]);
+  const [sliderValue, setSliderValue] = React.useState([600, 3000]);
+  const [flightsWithinPriceRange, setFlightsWithinPriceRange] = useState([]);
+  const [filteredAirports, setFilteredAirports] = useState([]);
 
-  const handleSliderChange = (event, newValue) => {
-    setSliderValue(newValue);
+  const handleFilterBtn = () => {
+    const airports = filteredAirports.filter((flight) => {
+      const flightPrice = flight.flightDetails[0].flightCost;
+      return flightPrice >= sliderValue[0] && flightPrice <= sliderValue[1];
+    });
+
+    // Update the state with the filtered flights within the price range
+    setFlightsWithinPriceRange(airports);
+    // console.log("filteredAirports", filteredAirports);
+    // console.log("final", flightsWithinPriceRange);
   };
+
+  const [formData, setFormData] = useState({
+    tripType: "One-way",
+    fromValue: "",
+    toValue: "",
+    tourType: "",
+    departDate: {
+      fullDate: "",
+      date: "",
+      day: "",
+      month: "",
+    },
+    returnDate: {
+      fullDate: "",
+      date: "",
+      day: "",
+      month: "",
+    },
+  });
 
   useEffect(() => {
     const handleScroll = () => {
@@ -266,308 +440,705 @@ const DisplayFlights = () => {
     };
   }, []);
 
-  const FilterTab = () => {
-    return (
-      <Box sx={{ background: "#fff" }}>
-        <Typography
-          variant="h6"
-          sx={{
-            color: "#ffffff",
-            fontSize: "22px",
-            textAlign: "center",
-            background: "#57112f",
-            padding: "14px 15px",
-          }}
-        >
-          FILTERS
-        </Typography>
-        <Box sx={{ p: "35px 30px" }}>
+  const DisplayFlights = () => {
+    const [changeHeight, setChangeHeight] = useState(false);
+
+    const handleSliderChange = (event, newValue) => {
+      setSliderValue(newValue);
+      // const sliderAirports = filteredAirports.filter(
+      //   (airport) =>
+      //     airport.flightDetails[0].flightCost >= sliderValue[0] &&
+      //     airport.flightDetails[0].flightCost <= sliderValue[1]
+      // );
+      // setFilteredAirports(sliderAirports);
+      // console.log(sliderAirports);
+    };
+
+    useEffect(() => {
+      const handleScroll = () => {
+        const scrollHeight = window.scrollY;
+        setChangeHeight(scrollHeight > 200);
+      };
+
+      window.addEventListener("scroll", handleScroll);
+
+      return () => {
+        window.removeEventListener("scroll", handleScroll);
+      };
+    }, []);
+
+    const FilterTab = () => {
+      return (
+        <Box sx={{ background: "#fff" }}>
           <Typography
             variant="h6"
             sx={{
-              fontSize: "18px",
-              color: "#571336",
-              marginBottom: "30px",
-              paddingBottom: "15px",
-              borderBottom: "1px dashed #d2d2d2",
-              fontWeight: "600",
+              color: "#ffffff",
+              fontSize: "22px",
+              textAlign: "center",
+              background: "#57112f",
+              padding: "14px 15px",
             }}
           >
-            Price Range
+            FILTERS
           </Typography>
-          <Slider
-            value={sliderValue}
-            onChange={handleSliderChange}
-            aria-labelledby=""
-            valueLabelDisplay="off"
-            min={300}
-            max={5500}
-            step={1}
-            sx={{ color: "#57112f", mb: "30px" }}
-          />
-          <Box
-            display={"flex"}
-            alignItems={"center"}
-            justifyContent={"space-between"}
-          >
+          <Box sx={{ p: "35px 30px" }}>
             <Typography
-              sx={{ fontSize: "14px", fontWeight: "500", color: "#6a2e4d" }}
-            >
-              Price:{" "}
-              <span
-                style={{ width: "100px", color: "#571336", fontWeight: "600" }}
-              >
-                ${sliderValue[0]} - ${sliderValue[1]}
-              </span>
-            </Typography>
-            <Button
+              variant="h6"
               sx={{
-                transition: "all .3s ease-out 0s",
-                cursor: "pointer",
-                minWidth: "68px",
-                padding: "9px 12px",
+                fontSize: "18px",
                 color: "#571336",
-                fontSize: "13px",
-                background: "#fbf9f2",
+                marginBottom: "30px",
+                paddingBottom: "15px",
+                borderBottom: "1px dashed #d2d2d2",
                 fontWeight: "600",
-                border: "1px solid #ebebeb",
               }}
             >
-              Filter
-            </Button>
+              Price Range
+            </Typography>
+            <Slider
+              value={sliderValue}
+              onChange={handleSliderChange}
+              aria-labelledby=""
+              valueLabelDisplay="off"
+              min={300}
+              max={2500}
+              step={1}
+              sx={{ color: "#57112f", mb: "30px" }}
+            />
+            <Box
+              display={"flex"}
+              alignItems={"center"}
+              justifyContent={"space-between"}
+            >
+              <Typography
+                sx={{ fontSize: "14px", fontWeight: "500", color: "#6a2e4d" }}
+              >
+                Price:{" "}
+                <span
+                  style={{
+                    width: "100px",
+                    color: "#571336",
+                    fontWeight: "600",
+                  }}
+                >
+                  ${sliderValue[0]} - ${sliderValue[1]}
+                </span>
+              </Typography>
+              <Button
+                onClick={handleFilterBtn}
+                sx={{
+                  transition: "all .3s ease-out 0s",
+                  cursor: "pointer",
+                  minWidth: "68px",
+                  padding: "9px 12px",
+                  color: "#571336",
+                  fontSize: "13px",
+                  background: "#fbf9f2",
+                  fontWeight: "600",
+                  border: "1px solid #ebebeb",
+                }}
+              >
+                Filter
+              </Button>
+            </Box>
           </Box>
+          <Divider />
+          {/* <Box sx={{ p: "35px 30px" }}>
+            <Typography
+              variant="h6"
+              sx={{
+                fontSize: "18px",
+                color: "#571336",
+                marginBottom: "30px",
+                paddingBottom: "15px",
+                borderBottom: "1px dashed #d2d2d2",
+                fontWeight: "600",
+              }}
+            >
+              DepartureTime
+            </Typography>
+            <Box>
+              <Button
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  background: "#ebebee",
+                  fontSize: "16px",
+                  fontWeight: "600",
+                  color: "#6a2e4d",
+                  padding: "13px 20px",
+                  width: "100%",
+                  textDecoration: "none",
+                  mb: 1,
+                }}
+              >
+                <WbTwilight sx={{ color: "#6a2e4d", mr: 2 }} />
+                <Typography
+                  sx={{
+                    p: "0 2em",
+                    position: "relative",
+                    "&:before": {
+                      content: '" "',
+                      position: "absolute",
+                      width: "3px",
+                      background: "#606575",
+                      height: "100%",
+                      left: "0em",
+                    },
+                  }}
+                >
+                  00:00 - 05:59
+                </Typography>
+              </Button>
+              <Button
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  background: "#ebebee",
+                  fontSize: "16px",
+                  fontWeight: "600",
+                  color: "#6a2e4d",
+                  padding: "13px 20px",
+                  width: "100%",
+                  textDecoration: "none",
+                  mb: 1,
+                }}
+              >
+                <WbSunnyOutlined sx={{ color: "#6a2e4d", mr: 2 }} />
+                <Typography
+                  sx={{
+                    p: "0 2em",
+                    position: "relative",
+                    "&:before": {
+                      content: '" "',
+                      position: "absolute",
+                      width: "3px",
+                      background: "#606575",
+                      height: "100%",
+                      left: "0em",
+                    },
+                  }}
+                >
+                  06:00 - 11:59
+                </Typography>
+              </Button>
+              <Button
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  background: "#ebebee",
+                  fontSize: "16px",
+                  fontWeight: "600",
+                  color: "#6a2e4d",
+                  padding: "13px 20px",
+                  width: "100%",
+                  textDecoration: "none",
+                  mb: 1,
+                }}
+              >
+                <Brightness4Outlined sx={{ color: "#6a2e4d", mr: 2 }} />
+                <Typography
+                  sx={{
+                    p: "0 2em",
+                    position: "relative",
+                    "&:before": {
+                      content: '" "',
+                      position: "absolute",
+                      width: "3px",
+                      background: "#606575",
+                      height: "100%",
+                      left: "0em",
+                    },
+                  }}
+                >
+                  12:00 - 17:59
+                </Typography>
+              </Button>
+              <Button
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  background: "#ebebee",
+                  fontSize: "16px",
+                  fontWeight: "600",
+                  color: "#6a2e4d",
+                  padding: "13px 20px",
+                  width: "100%",
+                  textDecoration: "none",
+                  mb: 1,
+                }}
+              >
+                <NightsStayOutlined sx={{ color: "#6a2e4d", mr: 2 }} />
+                <Typography
+                  sx={{
+                    p: "0 2em",
+                    position: "relative",
+                    "&:before": {
+                      content: '" "',
+                      position: "absolute",
+                      width: "3px",
+                      background: "#606575",
+                      height: "100%",
+                      left: "0em",
+                    },
+                  }}
+                >
+                  18:00 - 23:59
+                </Typography>
+              </Button>
+            </Box>
+          </Box>
+          <Divider />
+          <Box sx={{ p: "35px 30px" }}>
+            <Typography
+              variant="h6"
+              sx={{
+                fontSize: "18px",
+                color: "#571336",
+                marginBottom: "30px",
+                paddingBottom: "15px",
+                borderBottom: "1px dashed #d2d2d2",
+                fontWeight: "600",
+              }}
+            >
+              Number of stops
+            </Typography>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                background: "#ebebee",
+                padding: "13px 20px",
+                position: "relative",
+              }}
+            >
+              <ConnectingAirports sx={{ fontSize: "27px", color: "#5d1b3d" }} />
+              <Select
+                labelId="demo-simple-select-label"
+                id="demo-simple-select"
+                fullWidth
+                sx={{ height: "30px", border: "none" }}
+                // value={"Direct"}
+                value={10}
+              >
+                <MenuItem value={10}>Direct</MenuItem>
+                <MenuItem value={20}>One stop</MenuItem>
+                <MenuItem value={30}>Two stop</MenuItem>
+              </Select>
+            </Box>
+          </Box> */}
         </Box>
-        <Divider />
-        <Box sx={{ p: "35px 30px" }}>
-          <Typography
-            variant="h6"
+      );
+    };
+
+    const DisplayFlightData = (props) => {
+      const [displayFlightDetails, setDisplayFlightDetails] = useState(false);
+      return (
+        <Card sx={{ mb: 4 }}>
+          <CardContent
             sx={{
-              fontSize: "18px",
-              color: "#571336",
-              marginBottom: "30px",
-              paddingBottom: "15px",
-              borderBottom: "1px dashed #d2d2d2",
-              fontWeight: "600",
+              padding: displayFlightDetails
+                ? "30px 30px 10px 30px !important"
+                : "30px 30px 10px 30px !important",
             }}
           >
-            DepartureTime
-          </Typography>
-          <Box>
-            <Button
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                background: "#ebebee",
-                fontSize: "16px",
-                fontWeight: "600",
-                color: "#6a2e4d",
-                padding: "13px 20px",
-                width: "100%",
-                textDecoration: "none",
-                mb: 1,
-              }}
-            >
-              <WbTwilight sx={{ color: "#6a2e4d", mr: 2 }} />
-              <Typography
-                sx={{
-                  p: "0 2em",
-                  position: "relative",
-                  "&:before": {
-                    content: '" "',
-                    position: "absolute",
-                    width: "3px",
-                    background: "#606575",
-                    height: "100%",
-                    left: "0em",
-                  },
-                }}
+            <Grid container display={"flex"} alignItems={"flex-start"} mb={2}>
+              <Grid item xs={4}>
+                <Box display={"flex"} alignItems={"center"}>
+                  <img
+                    src={props.flightLogo}
+                    alt="flightLogo"
+                    style={{ marginRight: "20px" }}
+                  />
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      color: "#571336",
+                      fontSize: "18px",
+                      fontWeight: "600",
+                    }}
+                  >
+                    {props.flightName}
+                  </Typography>
+                </Box>
+                <Typography
+                  variant="h6"
+                  fontWeight={600}
+                  sx={{
+                    fontSize: "13px",
+                    color: "#6a2e4d",
+                    mt: 2,
+                  }}
+                >
+                  Operated by {props.operatorName}
+                </Typography>
+              </Grid>
+              <Grid item xs={5} display={"flex"} alignItems={"flex-start"}>
+                <Box padding={"0 0.5em"}>
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      color: "#6a2e4d",
+                      fontWeight: "500",
+                      fontSize: "16px",
+                    }}
+                  >
+                    {formData.departDate.day},
+                  </Typography>
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      color: "#6a2e4d",
+                      fontWeight: "500",
+                      fontSize: "16px",
+                    }}
+                  >
+                    {formData.departDate.month} {formData.departDate.date}
+                  </Typography>
+                </Box>
+                <Box padding={"0 0.5em"}>
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      color: "#6a2e4d",
+                      fontWeight: "600",
+                      fontSize: "16px",
+                    }}
+                  >
+                    {props.flightTime}
+                  </Typography>
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      color: "#6a2e4d",
+                      fontWeight: "500",
+                      fontSize: "16px",
+                    }}
+                  >
+                    DAC
+                  </Typography>
+                </Box>
+                <Box padding={"0 0.5em"}>
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      color: "#6a2e4d",
+                      fontWeight: "500",
+                      fontSize: "16px",
+                    }}
+                  >
+                    {props.journeyTime}h
+                  </Typography>
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      color: "#6a2e4d",
+                      fontWeight: "500",
+                      fontSize: "16px",
+                    }}
+                  >
+                    {props.numberOfStops} Stops
+                  </Typography>
+                </Box>
+              </Grid>
+              <Grid item xs={3} textAlign={"center"}>
+                <Typography
+                  variant="h6"
+                  sx={{ color: "#6a2e4d", fontWeight: "600", fontSize: "18px" }}
+                >
+                  US${props.flightCost}
+                </Typography>
+                <Button
+                  variant="contained"
+                  endIcon={<FlightTakeoff />}
+                  sx={{
+                    width: "100%",
+                    padding: "11px 50px",
+                    background: "#ffa903",
+                    color: "#2a2a2a",
+                    fontWeight: "600",
+                    "&:hover": {
+                      background: "#2a2a2a",
+                      color: "#fff",
+                    },
+                  }}
+                >
+                  Select
+                </Button>
+              </Grid>
+            </Grid>
+            <Divider />
+            <Grid container mt={1} display={"flex"}>
+              <Grid
+                item
+                xs={12}
+                display={"flex"}
+                justifyContent={"space-between"}
+                alignItems={"center"}
               >
-                00:00 - 05:59
-              </Typography>
-            </Button>
-            <Button
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                background: "#ebebee",
-                fontSize: "16px",
-                fontWeight: "600",
-                color: "#6a2e4d",
-                padding: "13px 20px",
-                width: "100%",
-                textDecoration: "none",
-                mb: 1,
-              }}
+                <Button
+                  variant="text"
+                  onClick={() => setDisplayFlightDetails(!displayFlightDetails)}
+                  sx={{ color: "#6a2e4d", fontWeight: "500" }}
+                  startIcon={
+                    <ExpandMore
+                      sx={{
+                        transform: displayFlightDetails && "rotate(180deg)",
+                        transition: "all linear 0.2s",
+                      }}
+                    />
+                  }
+                >
+                  Flight Details
+                </Button>
+                <Typography
+                  variant="h6"
+                  sx={{ fontSize: "13px", fontWeight: "500", color: "#6a2e4d" }}
+                >
+                  Price per person (incl. taxes & fees)
+                </Typography>
+              </Grid>
+            </Grid>
+          </CardContent>
+          <Divider sx={{ borderStyle: "dashed" }} />
+          {displayFlightDetails && (
+            <motion.div
+              initial={{ height: "0" }}
+              animate={{ height: "auto" }}
+              transition={{ type: "spring", duration: 0.5 }}
             >
-              <WbSunnyOutlined sx={{ color: "#6a2e4d", mr: 2 }} />
-              <Typography
-                sx={{
-                  p: "0 2em",
-                  position: "relative",
-                  "&:before": {
-                    content: '" "',
-                    position: "absolute",
-                    width: "3px",
-                    background: "#606575",
-                    height: "100%",
-                    left: "0em",
-                  },
-                }}
-              >
-                06:00 - 11:59
-              </Typography>
-            </Button>
-            <Button
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                background: "#ebebee",
-                fontSize: "16px",
-                fontWeight: "600",
-                color: "#6a2e4d",
-                padding: "13px 20px",
-                width: "100%",
-                textDecoration: "none",
-                mb: 1,
-              }}
-            >
-              <Brightness4Outlined sx={{ color: "#6a2e4d", mr: 2 }} />
-              <Typography
-                sx={{
-                  p: "0 2em",
-                  position: "relative",
-                  "&:before": {
-                    content: '" "',
-                    position: "absolute",
-                    width: "3px",
-                    background: "#606575",
-                    height: "100%",
-                    left: "0em",
-                  },
-                }}
-              >
-                12:00 - 17:59
-              </Typography>
-            </Button>
-            <Button
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                background: "#ebebee",
-                fontSize: "16px",
-                fontWeight: "600",
-                color: "#6a2e4d",
-                padding: "13px 20px",
-                width: "100%",
-                textDecoration: "none",
-                mb: 1,
-              }}
-            >
-              <NightsStayOutlined sx={{ color: "#6a2e4d", mr: 2 }} />
-              <Typography
-                sx={{
-                  p: "0 2em",
-                  position: "relative",
-                  "&:before": {
-                    content: '" "',
-                    position: "absolute",
-                    width: "3px",
-                    background: "#606575",
-                    height: "100%",
-                    left: "0em",
-                  },
-                }}
-              >
-                18:00 - 23:59
-              </Typography>
-            </Button>
-          </Box>
-        </Box>
-        <Divider />
-        <Box sx={{ p: "35px 30px" }}>
-          <Typography
-            variant="h6"
-            sx={{
-              fontSize: "18px",
-              color: "#571336",
-              marginBottom: "30px",
-              paddingBottom: "15px",
-              borderBottom: "1px dashed #d2d2d2",
-              fontWeight: "600",
-            }}
-          >
-            Number of stops
-          </Typography>
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              background: "#ebebee",
-              padding: "13px 20px",
-              position: "relative",
-            }}
-          >
-            <ConnectingAirports sx={{ fontSize: "27px", color: "#5d1b3d" }} />
-            <Select
-              labelId="demo-simple-select-label"
-              id="demo-simple-select"
-              fullWidth
-              sx={{ height: "30px", border: "none" }}
-              value={"Direct"}
-            >
-              <MenuItem value={10}>Direct</MenuItem>
-              <MenuItem value={20}>One stop</MenuItem>
-              <MenuItem value={30}>Two stop</MenuItem>
-            </Select>
-          </Box>
-        </Box>
+              <CardContent sx={{ padding: "1em 3em 2em!important" }}>
+                <Grid
+                  container
+                  display={"flex"}
+                  justifyContent={"space-between"}
+                  alignItems={"center"}
+                >
+                  <Grid item xs={3}>
+                    <Typography
+                      variant="contained"
+                      sx={{
+                        fontSize: "13px",
+                        fontWeight: 500,
+                        color: "#ffffff",
+                        background: "#ffa903",
+                        borderRadius: "3px",
+                        padding: "5px 13px",
+                        display: "inlineBlock",
+                      }}
+                    >
+                      {formData.departDate.day},{" "}
+                      {/* {formData.departDate.month.slice(0, 3)}{" "} */}
+                      {formData.departDate.date}
+                    </Typography>
+                    <Box sx={{ mt: 3, mb: 2 }}>
+                      <Typography
+                        variant="h6"
+                        sx={{
+                          fontSize: "14px",
+                          fontWeight: 600,
+                          color: "#571336",
+                        }}
+                      >
+                        {formData.departDate.day}, {formData.departDate.month}{" "}
+                        {formData.departDate.date} - {props.flightTime}
+                      </Typography>
+                      <Typography
+                        variant="h6"
+                        sx={{
+                          fontSize: "14px",
+                          fontWeight: 600,
+                          color: "#571336",
+                          opacity: 0.68,
+                        }}
+                      >
+                        {props.journeyTime}h 15m
+                      </Typography>
+                    </Box>
+
+                    {formData.tripType !== "One-way" && (
+                      <Typography
+                        variant="h6"
+                        sx={{
+                          fontSize: "14px",
+                          fontWeight: 600,
+                          color: "#571336",
+                        }}
+                      >
+                        {formData.returnDate.day}, {formData.returnDate.month}{" "}
+                        {formData.returnDate.date} - 03:20
+                      </Typography>
+                    )}
+                  </Grid>
+                  <Grid item xs={9} pl={2}>
+                    <Typography
+                      sx={{
+                        fontSize: "16px",
+                        color: "#571336",
+                        fontWeight: "600",
+                        display: "flex",
+                        alignItems: "center",
+                      }}
+                    >
+                      <Flight sx={{ mr: 2 }} /> {props.fromLocation}
+                    </Typography>
+                    <Grid
+                      display={"flex"}
+                      alignItems={"center"}
+                      sx={{
+                        position: "relative",
+                        width: "100%",
+                        "&::before": {
+                          content: '" "',
+                          position: "absolute",
+                          width: "1px",
+                          border: "1px dashed #ebebee",
+                          background: "#571336",
+                          height: "80%",
+                          left: "10px",
+                        },
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          background: "#ebebee",
+                          margin: "0 1em 0 2.5em",
+                          width: "100%",
+                          padding: "0.5em 1em !important",
+                          display: "flex",
+                          alignItems: "center",
+                        }}
+                      >
+                        <img
+                          src={props.flightLogo}
+                          alt="flightLogo"
+                          style={{ marginRight: "20px" }}
+                        />
+
+                        <Box>
+                          <Typography
+                            sx={{
+                              fontSize: "13px",
+                              fontWeight: "600",
+                              color: "#6a2e4d",
+                              opacity: 0.76,
+                            }}
+                          >
+                            Tpm Line
+                          </Typography>
+                          <Typography
+                            sx={{
+                              fontSize: "13px",
+                              fontWeight: "600",
+                              color: "#6a2e4d",
+                              opacity: 0.76,
+                            }}
+                          >
+                            Operated by Airlines {props.operatorName} (
+                            {props.flightName})
+                          </Typography>
+                          <Typography
+                            sx={{
+                              fontSize: "13px",
+                              fontWeight: "600",
+                              color: "#6a2e4d",
+                              opacity: 0.76,
+                            }}
+                          >
+                            Economy | Flight EK585 | Aircraft BOEING 777-300ER
+                          </Typography>
+                          <Typography
+                            sx={{
+                              fontSize: "13px",
+                              fontWeight: "600",
+                              color: "#6a2e4d",
+                              opacity: 0.76,
+                            }}
+                          >
+                            Adult(s): 25KG luggage free
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </Grid>
+                    <Typography
+                      sx={{
+                        fontSize: "16px",
+                        color: "#571336",
+                        marginBottom: "10px",
+                        fontWeight: "600",
+                        display: "flex",
+                        alignItems: "center",
+                      }}
+                    >
+                      <RadioButtonUnchecked sx={{ mr: 2 }} />
+                      {props.toLocation}
+                    </Typography>
+                  </Grid>
+                </Grid>
+              </CardContent>
+            </motion.div>
+          )}
+        </Card>
+      );
+    };
+
+    return (
+      <Box
+        sx={{
+          position: "absolute",
+          marginTop: changeHeight ? 53 : 30.5,
+          minHeight: "100vh",
+          width: "100%",
+          left: 0,
+          right: 0,
+          background: "#FBF9F2",
+          // padding: "0 6em",
+          paddingTop: "4em",
+        }}
+      >
+        <Container maxWidth="xl">
+          <Grid container spacing={4}>
+            <Grid item md={3} sx={{ display: { sm: "none", md: "block" } }}>
+              <FilterTab />
+            </Grid>
+            <Grid item xs={12} md={9}>
+              {flightsWithinPriceRange.map((flight, index) => (
+                <DisplayFlightData
+                  key={index} // Make sure to provide a unique key for each element in the array
+                  flightLogo={flight.flightDetails[0].flightLogo}
+                  flightName={flight.flightDetails[0].flightName}
+                  operatorName={flight.flightDetails[0].operatorName}
+                  // flightDay={flight}
+                  // flightDate={"Jun 16"}
+                  journeyTime={flight.flightDetails[0].journeyTime}
+                  flightTime={flight.flightDetails[0].flightTime}
+                  numberOfStops={flight.flightDetails[0].numberOfStops}
+                  flightCost={flight.flightDetails[0].flightCost}
+                  fromLocation={flight.airportCode + " - " + flight.airportName}
+                  toLocation={
+                    airportsJson.find(
+                      (airport) => airport.stateAirportName === formData.toValue
+                    )
+                      ? airportsJson.find(
+                          (airport) =>
+                            airport.stateAirportName === formData.toValue
+                        ).airportCode +
+                        " - " +
+                        airportsJson.find(
+                          (airport) =>
+                            airport.stateAirportName === formData.toValue
+                        ).stateAirportName
+                      : ""
+                  }
+                />
+              ))}
+            </Grid>
+          </Grid>
+        </Container>
       </Box>
     );
   };
-
-  return (
-    <Box
-      sx={{
-        position: "absolute",
-        marginTop: changeHeight ? 53 : 30.5,
-        minHeight: "100vh",
-        width: "100%",
-        left: 0,
-        right: 0,
-        background: "#FBF9F2",
-        // padding: "0 6em",
-        paddingTop: "4em",
-      }}
-    >
-      <Container>
-        <Grid container spacing={4}>
-          <Grid item md={4}>
-            <FilterTab />
-          </Grid>
-          <Grid item md={8}>
-            2
-          </Grid>
-        </Grid>
-      </Container>
-    </Box>
-  );
-};
-
-export const BookingTab = () => {
-  const [changeHeight, setChangeHeight] = useState(false);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollHeight = window.scrollY;
-      setChangeHeight(scrollHeight > 200);
-    };
-
-    window.addEventListener("scroll", handleScroll);
-
-    return () => {
-      window.removeEventListener("scroll", handleScroll);
-    };
-  }, []);
 
   return (
     <Box>
@@ -613,35 +1184,12 @@ export const BookingTab = () => {
               </Typography>
             </Grid>
           </Grid>
-          <Grid container p={1}>
-            <FormControl component="fieldset">
-              <RadioGroup row>
-                <FormControlLabel
-                  value="Roundtrip"
-                  control={<Radio sx={bookingTabStyles.radio} />}
-                  label={
-                    <span style={bookingTabStyles.radioLable}>Roundtrip</span>
-                  }
-                />
-                <FormControlLabel
-                  value="One-way"
-                  control={<Radio sx={bookingTabStyles.radio} />}
-                  label={
-                    <span style={bookingTabStyles.radioLable}>One-way</span>
-                  }
-                />
-                <FormControlLabel
-                  value="Multi-city"
-                  control={<Radio sx={bookingTabStyles.radio} />}
-                  label={
-                    <span style={bookingTabStyles.radioLable}>Multi-city</span>
-                  }
-                />
-              </RadioGroup>
-            </FormControl>
-          </Grid>
-          <BookingForm />
         </Card>
+        <BookingForm
+          setFormData={setFormData}
+          setFilteredAirports={setFilteredAirports}
+          setFlightsWithinPriceRange={setFlightsWithinPriceRange}
+        />
       </Container>
       <DisplayFlights />
     </Box>

@@ -218,12 +218,12 @@ const Navbar = () => {
                   >
                     <List>
                       <ListItem>
-                        <Link to="bookinglist" style={useStyles.menuLink}>
+                        <Link to="/bookinglist" style={useStyles.menuLink}>
                           Booking List
                         </Link>
                       </ListItem>
                       <ListItem>
-                        <Link to="bookingdetails" style={useStyles.menuLink}>
+                        <Link to="/bookingdetails" style={useStyles.menuLink}>
                           Booking Details
                         </Link>
                       </ListItem>
@@ -251,12 +251,12 @@ const Navbar = () => {
                   >
                     <List>
                       <ListItem>
-                        <Link to="ourblog" style={useStyles.menuLink}>
+                        <Link to="/ourblog" style={useStyles.menuLink}>
                           Our Blog
                         </Link>
                       </ListItem>
                       <ListItem>
-                        <Link to="blogdetails" style={useStyles.menuLink}>
+                        <Link to="/blogdetails" style={useStyles.menuLink}>
                           Blog Details
                         </Link>
                       </ListItem>
@@ -343,7 +343,7 @@ const Navbar = () => {
               </ListItem>
             </Link>
             <Divider />
-            <Link to="about" style={useStyles.link} onClick={handleMenuClick}>
+            <Link to="/about" style={useStyles.link} onClick={handleMenuClick}>
               <ListItem sx={useStyles.drawerLink}>
                 <ListItemText>About</ListItemText>
               </ListItem>
@@ -366,7 +366,7 @@ const Navbar = () => {
             <Divider />
             <Collapse in={pageCollapse} timeout="auto" unmountOnExit>
               <Link
-                to="bookinglist"
+                to="/bookinglist"
                 style={useStyles.link}
                 onClick={handleMenuClick}
               >
@@ -378,7 +378,7 @@ const Navbar = () => {
               </Link>
               <Divider />
               <Link
-                to="bookingdetail"
+                to="/bookingdetail"
                 style={useStyles.link}
                 onClick={handleMenuClick}
               >
@@ -407,7 +407,7 @@ const Navbar = () => {
             <Divider />
             <Collapse in={blogCollapse} timeout="auto" unmountOnExit>
               <Link
-                to="ourblog"
+                to="/ourblog"
                 style={useStyles.link}
                 onClick={handleMenuClick}
               >
@@ -419,7 +419,7 @@ const Navbar = () => {
               </Link>
               <Divider />
               <Link
-                to="blogdetail"
+                to="/blogdetail"
                 style={useStyles.link}
                 onClick={handleMenuClick}
               >
@@ -431,7 +431,11 @@ const Navbar = () => {
               </Link>
               <Divider />
             </Collapse>
-            <Link to="contact" style={useStyles.link} onClick={handleMenuClick}>
+            <Link
+              to="/contact"
+              style={useStyles.link}
+              onClick={handleMenuClick}
+            >
               <ListItem sx={useStyles.drawerLink}>
                 <ListItemText>Contact</ListItemText>
               </ListItem>
